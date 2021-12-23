@@ -1,0 +1,31 @@
+# Data Sources + Packages #
+###########################
+*.csv
+*.mat
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.png
+*.mov
+*.jpg
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+**/__pycache__/**
+__pycache__/**
+
+#   Custom Prepends  #
+######################
+[tT]est__*
