@@ -1,2 +1,6 @@
 # Boston Bruins Coding Challenge - December 2021
 ## Victor Arsenescu
+
+&nbsp;
+
+To run, simply type `python3 task1.py` and watch it run!

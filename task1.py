@@ -2,12 +2,9 @@ import json
 import numpy as np
 from typing import *
 from requests import get
-from itertools import chain
 from functools import partial
-from collections import defaultdict
 from difflib import SequenceMatcher
 from requests.models import Response
-from scipy.sparse import csc_matrix
 
 NHL_BASE = "https://statsapi.web.nhl.com/api/v1/"
 Scorer = TypeVar("Scorer", Callable[[Dict[int, Dict[str, int]]], float], Callable)
@@ -70,7 +67,7 @@ def get_offense(teams: Dict[int, str], base_url: str)-> Dict[int, Dict[int, str]
     offenses: Dict[int, Dict[int, str]] = dict()
     for tid in teams:
         try: offenses[tid] = get_data(base_url + f"/{tid+1}/roster", partial(extract_all_players_with_role, role='d')) # +1 to undo zero indexing
-        except: offenses[tid] = set(); continue
+        except: offenses[tid] = dict(); continue
     return offenses
 
 def offensive_scorer(stats: np.ndarray, role: str)-> float:
@@ -124,12 +121,12 @@ def get_lines(games: Dict[int, np.ndarray], selected_players: Dict[int, Dict[int
 
     for d,z,r,c in player_idxs:
         if d in five_on_five_ds.tolist() and z in five_on_five_zs.tolist():
-            lines[(d,z)] = lines.get((d,z), set()) | {(r,c)}
+            lines[(d,z)] = lines.get((d,z), list()) + [(r,c)]
 
     for (d,z), dims in lines.items():
         if z not in sorted_teams or sorted_teams[z] not in sorted_players: continue # not a selected team
         # for a particular game and a particular time, give me all the players which were in a 5-on-5 line and their longevities
-        lines[(d,z)] = {(col, sorted_players[sorted_teams[z]][row], player_longevity[sorted_players[sorted_teams[z]][row]]) for (row, col) in dims if col in five_on_five_cols.tolist()}
+        lines[(d,z)] = [(col, sorted_players[sorted_teams[z]][row], player_longevity[sorted_players[sorted_teams[z]][row]]) for (row, col) in dims if col in five_on_five_cols.tolist()]
 
     return lines
 
@@ -137,11 +134,9 @@ def get_heaviness(line_data: Dict[Tuple[int, int], Set[Tuple[int, int, float]]],
     top_lines: Dict[int, List[Tuple[float, float]]] = dict()
     indexed_lines: Dict[Tuple[int, int], List[Tuple[float, float]]] = dict()
     for (_, tid), raw_lines in line_data.items():
-        try :
-            if raw_lines is None or len(raw_lines) == 0 or len(raw_lines[0]) != 3: continue # not a selected team
-            for (line_idx, pid, dur) in raw_lines:
-                indexed_lines[(tid, line_idx)] = indexed_lines.get((tid, line_idx), list()) + [(scores.get(pid, 0), dur)]
-        except Exception as e: print(repr(e)); continue # soft error
+        if raw_lines is None or len(raw_lines) == 0 or len(raw_lines[0]) != 3: continue # not a selected team
+        for (line_idx, pid, dur) in raw_lines:
+            indexed_lines[(tid, line_idx)] = indexed_lines.get((tid, line_idx), list()) + [(scores.get(pid, 0), dur)]
     indexed_lines = {(tid, line_idx): (np.sum([s for s,_ in vals]), np.mean([d for _,d in vals])) for (tid, line_idx), vals in indexed_lines.items()}
 
     for tid in teams:
